@@ -1,10 +1,11 @@
+import React from 'react';
 import { extend, ReactThreeFiber } from '@react-three/fiber';
-import { shaderMaterial } from '@react-three/drei';
+import { ScreenQuad, shaderMaterial } from '@react-three/drei';
 
-import vert from './MainShaderMaterial.vert.glsl';
-import frag from './MainShaderMaterial.frag.glsl';
+import vert from './MainViewQuad.vert.glsl';
+import frag from './MainViewQuad.frag.glsl';
 
-export const MainShaderMaterial = shaderMaterial(
+const MainShaderMaterial = shaderMaterial(
   {
     mouse: [0, 0],
     resolution: [100, 100],
@@ -13,6 +14,14 @@ export const MainShaderMaterial = shaderMaterial(
   vert,
   frag
 );
+
+export const MainViewQuad: React.FC = () => {
+  return (
+    <ScreenQuad>
+      <mainShaderMaterial />
+    </ScreenQuad>
+  );
+};
 
 extend({ MainShaderMaterial });
 
