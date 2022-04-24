@@ -18,6 +18,7 @@ const App: React.FC = () => {
 
         outputEncoding: THREE.sRGBEncoding
       }}
+      frameloop="demand"
     >
       <React.Suspense fallback={null}>
         <MainStage />

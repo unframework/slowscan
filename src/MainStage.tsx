@@ -3,6 +3,8 @@ import { useFrame } from '@react-three/fiber';
 import { OrthographicCamera, ScreenQuad } from '@react-three/drei';
 import * as THREE from 'three';
 
+import './MainShaderMaterial';
+
 export const MainStage: React.FC = () => {
   const cameraRef = useRef<THREE.Object3D>();
 
@@ -20,7 +22,7 @@ export const MainStage: React.FC = () => {
       />
 
       <ScreenQuad>
-        <meshBasicMaterial color="#ff0000" />
+        <mainShaderMaterial />
       </ScreenQuad>
     </group>
   );

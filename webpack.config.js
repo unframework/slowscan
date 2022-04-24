@@ -18,6 +18,7 @@ module.exports = {
     rules: [
       { test: /\.(jsx?|tsx?)$/, use: 'ts-loader', exclude: /node_modules/ },
       { test: /\.css$/, use: ['style-loader', 'css-loader'] },
+      { test: /\.glsl$/, use: 'webpack-glsl-loader' },
       {
         test: /\.(jpe?g|png|gif|svg|flac|wav|glb)$/i,
         use: 'file-loader?name=assets/[name].[hash].[ext]'
