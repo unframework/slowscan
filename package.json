@@ -4,6 +4,7 @@
   "description": "",
   "main": "index.js",
   "scripts": {
+    "clang-format-glsl": "clang-format -i src/*.glsl",
     "start": "cross-env NODE_ENV=development webpack serve --mode development",
     "dist": "cross-env NODE_ENV=production webpack --mode development"
   },
@@ -31,6 +32,7 @@
     "webpack-glsl-loader": "^1.0.1"
   },
   "devDependencies": {
+    "clang-format": "^1.7.0",
     "prettier": "^1.19.1",
     "webpack-dev-server": "^3.11.0"
   }
