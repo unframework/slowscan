@@ -1,3 +1,5 @@
+#include <common>
+
 uniform vec2 mouse;
 uniform vec2 resolution;
 uniform sampler2D blueNoise;
@@ -5,12 +7,10 @@ uniform sampler2D blueNoise;
 const int MAX_MARCHING_STEPS = 100;
 const float MIN_DIST = 0.0;
 const float MAX_DIST = 10.0;
-const float EPSILON = 0.0001;
+const float SDF_EPSILON = 0.0001;
 
 #define VOL_AMOUNT 0.25
 #define VOL_STEP_D 0.5
-
-#define PI 3.14159265359
 
 /**
  * Signed distance function for a cube centered at the origin
@@ -67,8 +67,8 @@ float shortestDistanceToSurface(vec3 eye, vec3 marchingDirection, float start, f
     float depth = start;
     for (int i = 0; i < MAX_MARCHING_STEPS; i++) {
         float dist = sceneSDF(eye + depth * marchingDirection);
-        if (dist < EPSILON) {
-      return depth;
+        if (dist < SDF_EPSILON) {
+          return depth;
         }
         depth += dist;
         if (depth >= end) {
@@ -111,9 +111,9 @@ vec3 rayDirection(float fieldOfView, vec2 size, vec2 fragCoord) {
  */
 vec3 estimateNormal(vec3 p) {
     return normalize(vec3(
-        sceneSDF(vec3(p.x + EPSILON, p.y, p.z)) - sceneSDF(vec3(p.x - EPSILON, p.y, p.z)),
-        sceneSDF(vec3(p.x, p.y + EPSILON, p.z)) - sceneSDF(vec3(p.x, p.y - EPSILON, p.z)),
-        sceneSDF(vec3(p.x, p.y, p.z  + EPSILON)) - sceneSDF(vec3(p.x, p.y, p.z - EPSILON))
+        sceneSDF(vec3(p.x + SDF_EPSILON, p.y, p.z)) - sceneSDF(vec3(p.x - SDF_EPSILON, p.y, p.z)),
+        sceneSDF(vec3(p.x, p.y + SDF_EPSILON, p.z)) - sceneSDF(vec3(p.x, p.y - SDF_EPSILON, p.z)),
+        sceneSDF(vec3(p.x, p.y, p.z  + SDF_EPSILON)) - sceneSDF(vec3(p.x, p.y, p.z - SDF_EPSILON))
     ));
 }
 
@@ -165,7 +165,7 @@ vec3 contribForSun(vec3 p, vec3 N, vec3 albedo) {
 
     // occlusion check (starting a bit off the surface)
     float surfaceDist = shortestDistanceToSurface(p, dir, 0.01, MAX_DIST);
-    if (surfaceDist < MAX_DIST - EPSILON) {
+    if (surfaceDist < MAX_DIST - SDF_EPSILON) {
         // occluded by hard surface
         return vec3(0.0, 0.0, 0.0);
     }
@@ -175,7 +175,7 @@ vec3 contribForSun(vec3 p, vec3 N, vec3 albedo) {
     float distToEdge = max(0.0, 4.0 - p.z);
     float transmittance = 1.0 - (1.0 - exp(-VOL_AMOUNT * distToEdge)) * 0.2;
 
-    return vec3(2.2, 2.2, 2.1) * albedo * transmittance * dotLN;
+    return vec3(3.2, 3.2, 2.8) * albedo * transmittance * dotLN;
 }
 
 // from http://www.aduprat.com/portfolio/?page=articles/hemisphericalSDFAO
@@ -211,7 +211,7 @@ vec3 contribForBounce(vec3 p, vec3 N, vec3 albedo, vec4 rand) {
             // follow to any hard surface that could have produced the bounce
             // @todo use shorter cutoff
             float surfaceDist = shortestDistanceToSurface(currentP, bounceDir, 0.01, MAX_DIST);
-            if (surfaceDist > MAX_DIST - EPSILON) {
+            if (surfaceDist > MAX_DIST - SDF_EPSILON) {
                 break;
             }
 
@@ -314,7 +314,7 @@ void main( )
 
     // first, calculate distance until hard surface and shade it
     float dist = shortestDistanceToSurface(eye, worldDir, MIN_DIST, MAX_DIST);
-    if (dist > MAX_DIST - EPSILON) {
+    if (dist > MAX_DIST - SDF_EPSILON) {
         // Didn't hit anything
         gl_FragColor = vec4(0.0, 0.0, 0.0, 1.0);
     } else {
@@ -369,4 +369,5 @@ void main( )
     gl_FragColor.rgb += volAccumulator.rgb;
     // @todo tone curve
 
+    #include <tonemapping_fragment>
 }
