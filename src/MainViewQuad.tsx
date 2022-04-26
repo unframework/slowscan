@@ -1,24 +1,46 @@
 import React from 'react';
-import { extend, ReactThreeFiber } from '@react-three/fiber';
-import { ScreenQuad, shaderMaterial } from '@react-three/drei';
+import {
+  extend,
+  useThree,
+  useLoader,
+  ReactThreeFiber
+} from '@react-three/fiber';
+import { ScreenQuad } from '@react-three/drei';
+import * as THREE from 'three';
 
 import vert from './MainViewQuad.vert.glsl';
 import frag from './MainViewQuad.frag.glsl';
+import blueNoiseURL from './bluenoise.png'; // from ShaderToy
 
-const MainShaderMaterial = shaderMaterial(
-  {
-    mouse: [0, 0],
-    resolution: [100, 100],
-    blueNoise: null
-  },
-  vert,
-  frag
-);
+class MainShaderMaterial extends THREE.ShaderMaterial {
+  constructor() {
+    super({
+      vertexShader: vert,
+      fragmentShader: frag,
+      uniforms: {
+        mouse: new THREE.Uniform([0, 0]),
+        resolution: new THREE.Uniform([100, 100]),
+        blueNoise: new THREE.Uniform(null)
+      }
+    });
+  }
+}
 
 export const MainViewQuad: React.FC = () => {
+  const { size } = useThree();
+
+  // texture from https://opengameart.org/content/metalstone-textures by Spiney
+  const bnTexture = useLoader(THREE.TextureLoader, blueNoiseURL);
+  bnTexture.wrapS = THREE.RepeatWrapping;
+  bnTexture.wrapT = THREE.RepeatWrapping;
+
   return (
     <ScreenQuad>
-      <mainShaderMaterial />
+      <mainShaderMaterial
+        uniforms-mouse-value={[0, size.height * 0.05]}
+        uniforms-resolution-value={[size.width, size.height]}
+        uniforms-blueNoise-value={bnTexture}
+      />
     </ScreenQuad>
   );
 };
@@ -29,8 +51,8 @@ declare global {
   namespace JSX {
     interface IntrinsicElements {
       mainShaderMaterial: ReactThreeFiber.Object3DNode<
-        typeof MainShaderMaterial,
-        {}
+        MainShaderMaterial,
+        typeof MainShaderMaterial
       >;
     }
   }
