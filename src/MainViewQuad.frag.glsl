@@ -13,8 +13,7 @@ const float SDF_EPSILON = 0.0001;
 #define VOL_STEP_D 0.5
 
 /**
- * Signed distance function for a cube centered at the origin
- * with width = height = length = 2.0
+ * Signed distance function for a cube.
  */
 float cubeSDF(vec3 p, vec3 center, vec3 dim) {
   // If d.x < 0, then -1 < p.x < 1, and same logic applies to p.y, p.z
@@ -33,16 +32,7 @@ float cubeSDF(vec3 p, vec3 center, vec3 dim) {
 }
 
 /**
- * Signed distance function for a sphere centered at the origin with radius 1.0;
- */
-float sphereSDF(vec3 p) { return length(p) - 1.0; }
-
-/**
  * Signed distance function describing the scene.
- *
- * Absolute value of the return value indicates the distance to the surface.
- * Sign indicates whether the point is inside or outside the surface,
- * negative indicating inside.
  */
 float sceneSDF(vec3 samplePoint) {
   float cube1 = cubeSDF(samplePoint, vec3(0.0, -0.2, 0.0), vec3(4.0, 0.2, 4.0));
@@ -53,14 +43,7 @@ float sceneSDF(vec3 samplePoint) {
 }
 
 /**
- * Return the shortest distance from the eyepoint to the scene surface along
- * the marching direction. If no part of the surface is found between start and
- * end, return end.
- *
- * eye: the eye point, acting as the origin of the ray
- * marchingDirection: the normalized direction to march in
- * start: the starting distance away from the eye
- * end: the max distance away from the ey to march before giving up
+ * Main SDF marcher.
  */
 float shortestDistanceToSurface(vec3 eye, vec3 marchingDirection, float start,
                                 float end) {
@@ -84,13 +67,13 @@ float shortestDistanceToSurface(vec3 eye, vec3 marchingDirection, float start,
  *
  * fieldOfView: vertical field of view in degrees
  * size: resolution of the output image
- * fragCoord: the x,y coordinate of the pixel in the output image
  */
-vec3 rayDirection(float fieldOfView, vec2 size, vec2 fragCoord) {
+vec3 rayDirection(float fieldOfView, vec2 size) {
   // Fragment coords remapped to -1,1 range
-  vec2 screenPos = -1.0 + 2.0 * fragCoord.xy / size;
+  vec2 screenPos = -1.0 + 2.0 * gl_FragCoord.xy / size;
+
   // Aspect correction
-  screenPos.x *= resolution.x / resolution.y;
+  screenPos.x *= size.x / size.y;
 
   // Calculate ray direction for current fragment
   float aperture = 0.25 * 2.0 * PI;
@@ -119,34 +102,8 @@ vec3 estimateNormal(vec3 p) {
 }
 
 /**
- * Lighting contribution of a single point light source via Phong illumination.
- *
- * The vec3 returned is the RGB color of the light's contribution.
- *
- * k_a: Ambient color
- * k_d: Diffuse color
- * k_s: Specular color
- * alpha: Shininess coefficient
- * p: position of point being lit
- * eye: the position of the camera
- * lightPos: the position of the light
- * lightIntensity: color/intensity of the light
- *
- * See https://en.wikipedia.org/wiki/Phong_reflection_model#Description
+ * Lighting contribution for sun rays on given surface.
  */
-vec3 contribForLight(vec3 p, vec3 N, vec3 lightPos, vec3 lightIntensity) {
-  vec3 L = normalize(lightPos - p);
-
-  float dotLN = dot(L, N);
-
-  if (dotLN < 0.0) {
-    // Light not visible from this point on the surface
-    return vec3(0.0, 0.0, 0.0);
-  }
-
-  return lightIntensity * dotLN;
-}
-
 vec3 contribForSun(vec3 p, vec3 N, vec3 albedo) {
   vec3 dir = normalize(vec3(-1.0, 2.0, 1.0));
 
@@ -194,6 +151,9 @@ vec3 randomHemisphereDir(vec3 dir, vec4 rand) {
 #define BOUNCE_COUNT 2
 #define BOUNCE_SAMPLE_COUNT 4
 
+/**
+ * Lighting contribution for bounced rays.
+ */
 vec3 contribForBounce(vec3 p, vec3 N, vec3 albedo, vec4 rand) {
   vec3 bounceTotal = vec3(0.0, 0.0, 0.0);
   float sampleFraction = 1.0 / float(BOUNCE_SAMPLE_COUNT);
@@ -219,7 +179,6 @@ vec3 contribForBounce(vec3 p, vec3 N, vec3 albedo, vec4 rand) {
       }
 
       // get bounce origin surface lighting
-      // @todo apply proper albedo
       vec3 bounceP = currentP + surfaceDist * bounceDir;
       vec3 bounceN = estimateNormal(bounceP);
       bounceTotal +=
@@ -236,42 +195,12 @@ vec3 contribForBounce(vec3 p, vec3 N, vec3 albedo, vec4 rand) {
 }
 
 /**
- * Lighting via Phong illumination.
- *
- * The vec3 returned is the RGB color of that point after lighting is applied.
- * k_a: Ambient color
- * k_d: Diffuse color
- * k_s: Specular color
- * alpha: Shininess coefficient
- * p: position of point being lit
- * eye: the position of the camera
- *
- * See https://en.wikipedia.org/wiki/Phong_reflection_model#Description
+ * Lighting for a hard surface.
  */
 vec3 illumination(vec3 p, vec3 eye, vec3 albedo, vec4 rand) {
   vec3 N = estimateNormal(p);
 
   vec3 color = vec3(0.1, 0.1, 0.1);
-
-  /*
-  vec3 light1Pos = vec3(4.0 + sin(iTime),
-                        2.0,
-                        4.0 + cos(iTime));
-  vec3 light1Intensity = vec3(0.4, 0.4, 0.4);
-
-  color += contribForLight(p, N,
-                                light1Pos,
-                                light1Intensity);
-
-  vec3 light2Pos = vec3(2.0 + sin(0.37 * iTime),
-                        2.0 + cos(0.37 * iTime),
-                        2.0);
-  vec3 light2Intensity = vec3(0.4, 0.4, 0.4);
-
-  color += contribForLight(p, N,
-                                light2Pos,
-                                light2Intensity);
-  */
 
   color += contribForSun(p, N, albedo);
   color += contribForBounce(p, N, albedo, rand);
@@ -300,7 +229,7 @@ mat4 getViewMatrix(vec3 eye, vec3 center, vec3 up) {
 void main() {
   vec4 blueRand = texture(blueNoise, gl_FragCoord.xy / vec2(1024.0));
 
-  vec3 viewDir = rayDirection(60.0, resolution, gl_FragCoord.xy);
+  vec3 viewDir = rayDirection(60.0, resolution);
 
   vec2 mouse = 2.0 * (mouse / resolution - 0.5);
   float eyeAngleX = 6.28 * mouse.x;
