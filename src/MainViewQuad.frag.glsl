@@ -12,6 +12,10 @@ const float SDF_EPSILON = 0.0001;
 #define VOL_AMOUNT 0.25
 #define VOL_STEP_D 0.5
 
+vec4 blueRandom(vec2 offset) {
+  return texture(blueNoise, gl_FragCoord.xy / vec2(1024.0) + offset);
+}
+
 /**
  * Signed distance function for a cube.
  */
@@ -151,12 +155,13 @@ vec3 randomHemisphereDir(vec3 dir, vec4 rand) {
 #define BOUNCE_COUNT 2
 #define BOUNCE_SAMPLE_COUNT 4
 
+const float sampleFraction = 1.0 / float(BOUNCE_SAMPLE_COUNT);
+
 /**
  * Lighting contribution for bounced rays.
  */
-vec3 contribForBounce(vec3 p, vec3 N, vec3 albedo, vec4 rand) {
+vec3 contribForBounce(vec3 p, vec3 N, vec3 albedo, float randStep) {
   vec3 bounceTotal = vec3(0.0, 0.0, 0.0);
-  float sampleFraction = 1.0 / float(BOUNCE_SAMPLE_COUNT);
   vec3 comboAlbedo = albedo;
 
   for (int bsi = 0; bsi < BOUNCE_SAMPLE_COUNT; bsi += 1) {
@@ -164,8 +169,9 @@ vec3 contribForBounce(vec3 p, vec3 N, vec3 albedo, vec4 rand) {
     vec3 currentN = N;
 
     for (int bi = 0; bi < BOUNCE_COUNT; bi += 1) {
-      vec4 sampleRand = texture(
-          blueNoise, rand.xy + float(bsi) * sampleFraction + float(bi) * 0.1);
+      vec4 sampleRand =
+          blueRandom(vec2(randStep + 0.5 + 0.5 * float(bsi) * sampleFraction,
+                          randStep + float(bi) * 0.1));
 
       // pick random direction for bounce origin
       vec3 bounceDir = randomHemisphereDir(currentN, sampleRand);
@@ -197,13 +203,13 @@ vec3 contribForBounce(vec3 p, vec3 N, vec3 albedo, vec4 rand) {
 /**
  * Lighting for a hard surface.
  */
-vec3 illumination(vec3 p, vec3 eye, vec3 albedo, vec4 rand) {
+vec3 illumination(vec3 p, vec3 eye, vec3 albedo) {
   vec3 N = estimateNormal(p);
 
   vec3 color = vec3(0.1, 0.1, 0.1);
 
   color += contribForSun(p, N, albedo);
-  color += contribForBounce(p, N, albedo, rand);
+  color += contribForBounce(p, N, albedo, 0.0);
 
   return color;
 }
@@ -227,7 +233,7 @@ mat4 getViewMatrix(vec3 eye, vec3 center, vec3 up) {
 }
 
 void main() {
-  vec4 blueRand = texture(blueNoise, gl_FragCoord.xy / vec2(1024.0));
+  vec4 blueRand = blueRandom(vec2(0.0, 0.0));
 
   vec3 viewDir = rayDirection(60.0, resolution);
 
@@ -252,7 +258,7 @@ void main() {
     // The closest point on the surface to the eyepoint along the view ray
     vec3 p = eye + dist * worldDir;
 
-    vec3 color = illumination(p, eye, vec3(0.75, 0.5, 0.5), blueRand);
+    vec3 color = illumination(p, eye, vec3(0.75, 0.5, 0.5));
 
     gl_FragColor = vec4(color, 1.0);
   }
@@ -263,6 +269,8 @@ void main() {
   vec4 volAccumulator = vec4(0.0, 0.0, 0.0, 1.0);
   vec3 volAlbedo = vec3(1.0, 1.0, 1.0);
   for (int volStep = 0; volStep < 20; volStep++) {
+    float volStepRand = float(volStep) / 20.0;
+
     float newVolD = min(dist, volD + VOL_STEP_D);
     float transmittance = exp(-VOL_AMOUNT * (newVolD - volD));
     volD = newVolD;
@@ -270,12 +278,12 @@ void main() {
     vec3 volPos = eye + worldDir * volD;
 
     // add new scattering as occluded by existing accumulated opaqueness
-    vec4 nRand = texture(blueNoise, blueRand.xy + float(volStep) / 20.0);
+    vec4 nRand = blueRandom(vec2(0.25, volStepRand));
     vec3 scatterNormal = normalize(nRand.xyz);
 
     vec3 scatterLighting = contribForSun(volPos, scatterNormal, volAlbedo);
     scatterLighting +=
-        contribForBounce(volPos, scatterNormal, volAlbedo, nRand);
+        contribForBounce(volPos, scatterNormal, volAlbedo, volStepRand);
 
     vec3 scatterContrib = scatterLighting * (1.0 - transmittance);
     volAccumulator.rgb += scatterContrib * volAccumulator.a;
@@ -301,6 +309,8 @@ void main() {
   // add the luminance from volume samples
   gl_FragColor.rgb += volAccumulator.rgb;
 
-#include <tonemapping_fragment>
-#include <encodings_fragment>
+// clang-format off
+  #include <encodings_fragment>
+  #include <tonemapping_fragment>
+  // clang-format on
 }

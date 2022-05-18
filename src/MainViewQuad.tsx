@@ -33,6 +33,9 @@ export const MainViewQuad: React.FC = () => {
   const bnTexture = useLoader(THREE.TextureLoader, blueNoiseURL);
   bnTexture.wrapS = THREE.RepeatWrapping;
   bnTexture.wrapT = THREE.RepeatWrapping;
+  bnTexture.magFilter = THREE.NearestFilter;
+  bnTexture.minFilter = THREE.NearestFilter;
+  bnTexture.generateMipmaps = false;
 
   return (
     <ScreenQuad>
