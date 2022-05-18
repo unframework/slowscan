@@ -300,7 +300,7 @@ void main() {
 
   // add the luminance from volume samples
   gl_FragColor.rgb += volAccumulator.rgb;
-  // @todo tone curve
 
 #include <tonemapping_fragment>
+#include <encodings_fragment>
 }
