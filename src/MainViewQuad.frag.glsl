@@ -137,7 +137,7 @@ vec3 contribForSun(vec3 p, vec3 N, vec3 albedo) {
   float distToEdge = max(0.0, 4.0 - p.z);
   float transmittance = 1.0 - (1.0 - exp(-VOL_AMOUNT * distToEdge)) * 0.2;
 
-  return vec3(3.2, 3.2, 2.8) * albedo * transmittance * dotLN;
+  return vec3(2.2, 2.2, 2.2) * albedo * transmittance * dotLN;
 }
 
 // from http://www.aduprat.com/portfolio/?page=articles/hemisphericalSDFAO
@@ -258,7 +258,7 @@ void main() {
     // The closest point on the surface to the eyepoint along the view ray
     vec3 p = eye + dist * worldDir;
 
-    vec3 color = illumination(p, eye, vec3(0.75, 0.5, 0.5));
+    vec3 color = illumination(p, eye, vec3(0.5, 0.5, 0.5));
 
     gl_FragColor = vec4(color, 1.0);
   }
@@ -309,8 +309,8 @@ void main() {
   // add the luminance from volume samples
   gl_FragColor.rgb += volAccumulator.rgb;
 
-// clang-format off
-  #include <encodings_fragment>
+  // clang-format off
   #include <tonemapping_fragment>
+  #include <encodings_fragment>
   // clang-format on
 }
